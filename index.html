@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🇯🇵 일본여행 대시보드 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;700&display=swap');
+:root{--ink:#1a1a2e;--paper:#faf8f5;--red:#c0392b;--gold:#c9932a;--sage:#4a7c59;--mist:#e8e4de;--cream:#f5f1ea;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;}
+
+.hero{background:var(--ink);color:white;padding:2.2rem 2rem 1.8rem;position:relative;overflow:hidden;}
+.hero::before{content:'日本';position:absolute;right:2rem;top:50%;transform:translateY(-50%);font-family:'Noto Serif JP',serif;font-size:7rem;font-weight:700;opacity:.07;pointer-events:none;}
+.hero-inner{max-width:1200px;margin:0 auto;}
+.hero h1{font-family:'Noto Serif JP',serif;font-size:2rem;font-weight:700;letter-spacing:.05em;margin-bottom:.4rem;}
+.hero-sub{color:rgba(255,255,255,.55);font-size:.8rem;letter-spacing:.12em;}
+.hero-meta{display:flex;gap:1rem;margin-top:1.2rem;flex-wrap:wrap;}
+.meta-pill{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:100px;padding:.3rem .85rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem;}
+
+.flight-bar{background:#0f3460;color:white;padding:.6rem 2rem;}
+.flight-bar-inner{max-width:1200px;margin:0 auto;display:flex;gap:2rem;flex-wrap:wrap;align-items:center;}
+.flight-item{display:flex;align-items:center;gap:.6rem;font-size:.78rem;}
+.fn{font-weight:700;color:#7ec8e3;letter-spacing:.05em;}
+.farrow{color:rgba(255,255,255,.4);}
+.fsep{color:rgba(255,255,255,.2);}
+
+.tabs{background:white;border-bottom:1px solid var(--mist);position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.tabs-inner{max-width:1200px;margin:0 auto;display:flex;overflow-x:auto;scrollbar-width:none;}
+.tabs-inner::-webkit-scrollbar{display:none;}
+.tab-btn{padding:.9rem 1.4rem;border:none;background:none;cursor:pointer;font-family:'Noto Sans KR',sans-serif;font-size:.82rem;font-weight:500;color:#888;white-space:nowrap;border-bottom:3px solid transparent;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:.15rem;}
+.tab-btn .tab-date{font-size:.68rem;font-weight:300;}
+.tab-btn.active{color:var(--ink);border-bottom-color:var(--red);}
+.tab-btn:hover:not(.active){color:var(--ink);background:var(--cream);}
+
+.main{max-width:1200px;margin:0 auto;padding:1.5rem 1rem;display:grid;grid-template-columns:1fr 400px;gap:1.5rem;align-items:start;}
+@media(max-width:900px){.main{grid-template-columns:1fr;}.map-panel{order:-1;}}
+
+.day-panel{display:none;}.day-panel.active{display:block;}
+.day-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem;}
+.day-badge{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;}
+.d1{background:#fde8e7;}.d2{background:#e3f0fb;}.d3{background:#f0e8f7;}.d4{background:#e5f5ec;}
+.day-title{font-size:1.1rem;font-weight:700;}
+.day-subtitle{font-size:.78rem;color:#888;margin-top:.15rem;}
+
+.timeline{position:relative;}
+.timeline::before{content:'';position:absolute;left:18px;top:8px;bottom:8px;width:2px;background:var(--mist);}
+.tl-item{display:flex;gap:1rem;margin-bottom:.9rem;position:relative;}
+.tl-dot{width:38px;height:38px;border-radius:50%;background:white;border:2px solid var(--mist);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;z-index:1;}
+.tl-dot.transport{background:var(--ink);border-color:var(--ink);}
+.tl-dot.food{background:#fff5e6;border-color:var(--gold);}
+.tl-dot.attraction{background:#e8f4fd;border-color:#2980b9;}
+.tl-dot.hotel{background:#edf7ed;border-color:var(--sage);}
+
+.tl-card{flex:1;background:white;border:1px solid var(--mist);border-radius:12px;padding:.8rem 1rem;cursor:pointer;transition:all .2s;}
+.tl-card:hover{border-color:#bbb;box-shadow:0 4px 12px rgba(0,0,0,.08);}
+.tl-card.selected{border-color:var(--red);box-shadow:0 0 0 3px rgba(192,57,43,.12);}
+.tl-time{font-size:.68rem;font-weight:700;color:#aaa;letter-spacing:.05em;margin-bottom:.15rem;}
+.tl-title{font-size:.88rem;font-weight:700;margin-bottom:.2rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
+.tl-desc{font-size:.77rem;color:#666;line-height:1.5;}
+.tl-tip{background:#fffbf0;border-left:3px solid var(--gold);padding:.4rem .6rem;border-radius:0 6px 6px 0;font-size:.73rem;color:#7a5c00;margin-top:.5rem;line-height:1.4;}
+.badge{display:inline-flex;align-items:center;padding:.12rem .45rem;border-radius:100px;font-size:.62rem;font-weight:700;}
+.badge-rec{background:#e8f5e9;color:#2e7d32;}
+.badge-new{background:#fce4ec;color:#c62828;}
+.badge-onsen{background:#e8eaf6;color:#3949ab;}
+.rating{font-size:.68rem;color:var(--gold);font-weight:600;}
+
+.advice-box{background:linear-gradient(135deg,#1a1a2e,#2d1b69);border-radius:14px;padding:1.1rem 1.2rem;color:white;margin-bottom:1rem;}
+.advice-box h3{font-size:.82rem;font-weight:700;margin-bottom:.5rem;opacity:.9;}
+.advice-item{display:flex;gap:.5rem;font-size:.76rem;line-height:1.5;margin-bottom:.3rem;opacity:.85;}
+.advice-item::before{content:'•';opacity:.5;flex-shrink:0;}
+
+.map-panel{position:sticky;top:58px;}
+.map-wrap{border-radius:16px;overflow:hidden;border:1px solid var(--mist);box-shadow:0 4px 20px rgba(0,0,0,.1);}
+#map{width:100%;height:480px;}
+.map-legend{background:white;border:1px solid var(--mist);border-top:none;border-radius:0 0 16px 16px;padding:.75rem 1rem;display:flex;flex-wrap:wrap;gap:.6rem;}
+.legend-item{display:flex;align-items:center;gap:.35rem;font-size:.72rem;color:#555;}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* 커스텀 마커 */
+.cm{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,.4);cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:transform .15s;}
+.cm:hover{transform:scale(1.2);}
+
+/* Leaflet 팝업 커스터마이즈 */
+.leaflet-popup-content-wrapper{border-radius:10px!important;box-shadow:0 4px 20px rgba(0,0,0,.15)!important;padding:0!important;}
+.leaflet-popup-content{margin:0!important;padding:10px 14px!important;font-family:'Noto Sans KR',sans-serif;font-size:12px;font-weight:600;min-width:120px;}
+.leaflet-popup-tip-container{display:none!important;}
+.leaflet-control-zoom{border:none!important;box-shadow:0 2px 8px rgba(0,0,0,.15)!important;}
+.leaflet-control-zoom a{border-radius:8px!important;border:none!important;color:var(--ink)!important;font-weight:700;}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-sub">JAPAN TRAVEL PLAN 2026</div>
+    <h1>오사카 · 교토 여행</h1>
+    <div class="hero-meta">
+      <div class="meta-pill">✈️ 2026.06.13 – 06.16</div>
+      <div class="meta-pill">🏨 3박 4일</div>
+      <div class="meta-pill">🗺 충남 청양 → 오사카 → 교토</div>
+      <div class="meta-pill">👨‍👩‍👦 가족여행</div>
+    </div>
+  </div>
+</div>
+
+<div class="flight-bar">
+  <div class="flight-bar-inner">
+    <div class="flight-item">🛫 <span class="fn">KE723</span> 인천 09:35 <span class="farrow">→</span> 오사카(간사이) 11:20 <span style="opacity:.4;font-size:.7rem">6/13 토</span></div>
+    <span class="fsep">|</span>
+    <div class="flight-item">🛬 <span class="fn">KE724</span> 오사카(간사이) 12:35 <span class="farrow">→</span> 인천 14:25 <span style="opacity:.4;font-size:.7rem">6/16 화</span></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tabs-inner">
+    <button class="tab-btn active" onclick="switchDay(0)">✈️ DAY 1 <span class="tab-date">6월 13일 토</span></button>
+    <button class="tab-btn" onclick="switchDay(1)">🏯 DAY 2 <span class="tab-date">6월 14일 일</span></button>
+    <button class="tab-btn" onclick="switchDay(2)">🎋 DAY 3 <span class="tab-date">6월 15일 월</span></button>
+    <button class="tab-btn" onclick="switchDay(3)">🏠 DAY 4 <span class="tab-date">6월 16일 화</span></button>
+  </div>
+</div>
+
+<div class="main">
+<div class="left-col">
+
+<!-- DAY 1 -->
+<div class="day-panel active" id="day0">
+  <div class="day-header"><div class="day-badge d1">✈️</div><div><div class="day-title">오사카 도착의 날</div><div class="day-subtitle">충남 청양 → 인천 → 오사카 (KE723)</div></div></div>
+  <div class="advice-box"><h3>💡 클로드 수정 포인트</h3>
+    <div class="advice-item">충남 청양 04:30 출발 → 인천공항 2터미널 07:00 도착 예상. KE723 09:35 출발까지 2시간 35분 여유.</div>
+    <div class="advice-item">이치란은 24시간 영업 — 줄 길면 도톤보리 먼저 산책 후 재방문 OK.</div>
+    <div class="advice-item">구로몬시장 18시 폐장 → 오늘 저녁은 이자카야, 시장은 내일 아침(9시~)으로 이동!</div>
+  </div>
+  <div class="timeline">
+    <div class="tl-item" onclick="focusMap(36.4551,126.8029,'cheongyang')"><div class="tl-dot transport">🚗</div>
+      <div class="tl-card" id="card-cheongyang"><div class="tl-time">새벽 04:30</div><div class="tl-title">충남 청양 출발</div><div class="tl-desc">충청남도 청양군 청양읍 충절로 1012-176. 인천공항 2터미널까지 약 2시간 30분.</div></div></div>
+    <div class="tl-item" onclick="focusMap(37.4602,126.4407,'incheon')"><div class="tl-dot transport">🅿️</div>
+      <div class="tl-card" id="card-incheon"><div class="tl-time">07:00</div><div class="tl-title">인천공항 2터미널 · 발렛 주차</div><div class="tl-desc">인천 중구 운서동 2868. 주차어때 발렛 업체에 차량 인도 후 체크인·출국 수속.</div><div class="tl-tip">💡 귀국 시(6/16 14:25) 차량 반환 미리 연락 필수</div></div></div>
+    <div class="tl-item"><div class="tl-dot transport">✈️</div>
+      <div class="tl-card"><div class="tl-time">09:35 → 11:20</div><div class="tl-title">KE723 인천 → 오사카 (간사이)</div><div class="tl-desc">비행 약 1시간 45분. 입국심사 + 공항 이동 약 1시간 예상.</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.6657,135.5059,'hotel1')"><div class="tl-dot hotel">🏨</div>
+      <div class="tl-card" id="card-hotel1"><div class="tl-time">13:00 ~ 13:30</div><div class="tl-title">수퍼 호텔 난바 닛폰바시 도착 <span class="rating">★ 4.2</span></div><div class="tl-desc">1-20-5 Nipponbashi, Chuo-ku, 오사카. 체크인 전 짐 보관 요청.</div><div class="tl-tip">💡 웰컴바 14:00~20:00 무료!</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.6684,135.5032,'ichiran')"><div class="tl-dot food">🍜</div>
+      <div class="tl-card" id="card-ichiran"><div class="tl-time">14:00</div><div class="tl-title">이치란 도톤보리 남관 <span class="rating">★ 4.3</span> <span class="badge badge-rec">24시간</span></div><div class="tl-desc">첫 끼니! 칸막이 1인 라멘. 맛 농도·굵기·파 주문표 작성.</div><div class="tl-tip">💡 줄 길면 도톤보리 먼저 산책 후 재방문</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.6686,135.5031,'dotonbori')"><div class="tl-dot attraction">🎡</div>
+      <div class="tl-card" id="card-dotonbori"><div class="tl-time">15:00 ~ 17:00</div><div class="tl-title">도톤보리 산책</div><div class="tl-desc">글리코 간판·강변 산책로. 다리 위 사진 포인트.</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.6693,135.5026,'donki')"><div class="tl-dot attraction">🛒</div>
+      <div class="tl-card" id="card-donki"><div class="tl-time">17:00 ~ 18:30</div><div class="tl-title">돈키호테 도톤보리 <span class="rating">★ 3.8</span></div><div class="tl-desc">5층 규모. 간식·화장품·기념품. 면세 가능.</div></div></div>
+    <div class="tl-item"><div class="tl-dot food">🍶</div>
+      <div class="tl-card"><div class="tl-time">19:00 ~ 21:00</div><div class="tl-title">저녁 — 닛폰바시 근처 이자카야</div><div class="tl-desc">구로몬시장 18시 폐장 → 이자카야 추천. 오코노미야키·다코야키 근처 있음.</div><div class="tl-tip">💡 구로몬시장은 내일 아침 9시~로!</div></div></div>
+  </div>
+</div>
+
+<!-- DAY 2 -->
+<div class="day-panel" id="day1">
+  <div class="day-header"><div class="day-badge d2">🏯</div><div><div class="day-title">오사카성 → 교토 이동</div><div class="day-subtitle">조식 포함 · 체크아웃 · 교토 입성</div></div></div>
+  <div class="advice-box"><h3>💡 클로드 수정 포인트</h3>
+    <div class="advice-item">오사카성 코인로커: 모리노미야역 이용. 대형 캐리어 500~700엔.</div>
+    <div class="advice-item">점심 추천: KAWASAKI 가정식(★4.3) — 생선·채소 위주로 아버님 입맛에 딱!</div>
+    <div class="advice-item">교토 저녁: 야키니쿠 대신 스키야키(전골) 추천 — 두부·채소·달걀 풍부해 고기 싫어하셔도 OK.</div>
+  </div>
+  <div class="timeline">
+    <div class="tl-item"><div class="tl-dot food">🍳</div>
+      <div class="tl-card"><div class="tl-time">07:30 ~ 09:00</div><div class="tl-title">호텔 조식 (포함)</div><div class="tl-desc">수퍼호텔 조식 — 빵·일식 양쪽. 리뷰 호평.</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.6654,135.5062,'kuromon')"><div class="tl-dot attraction">🛒</div>
+      <div class="tl-card" id="card-kuromon"><div class="tl-time">09:00 ~ 09:45</div><div class="tl-title">구로몬시장 아침 산책 <span class="rating">★ 4.1</span></div><div class="tl-desc">숙소 바로 옆! 9시 개장. 신선 해산물·꼬치·와규·가리비 구경 및 시식.</div></div></div>
+    <div class="tl-item"><div class="tl-dot transport">🧳</div>
+      <div class="tl-card"><div class="tl-time">10:00</div><div class="tl-title">호텔 체크아웃 + 오사카성 출발</div><div class="tl-desc">지하철 → 모리노미야역. 역 코인로커에 캐리어 보관.</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.6873,135.5259,'osaka-castle')"><div class="tl-dot attraction">🏯</div>
+      <div class="tl-card" id="card-osaka-castle"><div class="tl-time">10:30 ~ 12:30</div><div class="tl-title">오사카성 관람 <span class="rating">★ 4.4</span></div><div class="tl-desc">공원 무료 / 천수각 ¥600. 전망대에서 오사카 시내 조망.</div><div class="tl-tip">💡 무료 자원봉사 가이드(영어) — 만나면 꼭 신청!</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.6678,135.494,'kawasaki')"><div class="tl-dot food">🍱</div>
+      <div class="tl-card" id="card-kawasaki"><div class="tl-time">12:30 ~ 13:30</div><div class="tl-title">점심 — KAWASAKI 가정식 <span class="rating">★ 4.3</span> <span class="badge badge-rec">추천</span></div><div class="tl-desc">채소·생선 중심 건강 정식. 아버님 입맛에 맞는 깔끔한 한 상.</div></div></div>
+    <div class="tl-item"><div class="tl-dot transport">🚄</div>
+      <div class="tl-card"><div class="tl-time">14:00 ~ 15:00</div><div class="tl-title">오사카 → 교토 (JR 신쾌속)</div><div class="tl-desc">오사카역 → 교토역 약 28분. ICOCA 또는 JR패스.</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.9888,135.7425,'hotel-kyoto')"><div class="tl-dot hotel">🏨</div>
+      <div class="tl-card" id="card-hotel-kyoto"><div class="tl-time">15:00 ~ 16:00</div><div class="tl-title">교토 우메코지 카덴쇼 체크인 <span class="rating">★ 4.3</span> <span class="badge badge-onsen">♨️온천</span></div><div class="tl-desc">Sujakuuchihatacho 41-10, Shimogyo Ward. 전관 다다미·유카타·공용/개인 온천.</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.9875,135.7593,'kyoto-tower')"><div class="tl-dot attraction">🗼</div>
+      <div class="tl-card" id="card-kyoto-tower"><div class="tl-time">16:30 ~ 18:00</div><div class="tl-title">교토타워 전망대 <span class="rating">★ 4.2</span></div><div class="tl-desc">교토역 앞 랜드마크. 100m 전망대 360도 조망. ¥900.</div></div></div>
+    <div class="tl-item" onclick="focusMap(35.0061,135.758,'sukiyaki')"><div class="tl-dot food">🍲</div>
+      <div class="tl-card" id="card-sukiyaki"><div class="tl-time">18:30 ~ 20:30</div><div class="tl-title">저녁 — 스키야키 히로시게 <span class="rating">★ 4.8</span> <span class="badge badge-rec">추천</span> <span class="badge badge-new">야키니쿠 대안</span></div><div class="tl-desc">두부·채소·실곤약·달걀 풍부 → 아버님도 편하게. 카운터 6석 소규모.</div><div class="tl-tip">⚠️ 예약 필수!</div></div></div>
+    <div class="tl-item"><div class="tl-dot hotel">♨️</div>
+      <div class="tl-card"><div class="tl-time">21:00 이후</div><div class="tl-title">카덴쇼 온천 & 숙면</div><div class="tl-desc">공용 온천(남녀 분리) + 개인 온천 5개 선착순. 유카타 입고 온천.</div></div></div>
+  </div>
+</div>
+
+<!-- DAY 3 -->
+<div class="day-panel" id="day2">
+  <div class="day-header"><div class="day-badge d3">🎋</div><div><div class="day-title">아라시야마 · 온천 · 료칸 가이세키</div><div class="day-subtitle">조식 미포함 · 대나무숲 · 료칸 이동</div></div></div>
+  <div class="advice-box"><h3>💡 클로드 수정 포인트</h3>
+    <div class="advice-item">아침: 교토역 근처 Breakfast Udon Express(★4.7) — 7~10시만 운영. 400~600엔대.</div>
+    <div class="advice-item">아라시야마 점심: 요시무라 — 강 뷰 + 청어소바·텐푸라·장어덮밥 모두 OK.</div>
+    <div class="advice-item">료칸: 아라시야마 강변 하나이카다(花筏) — 가이세키 + 온천 + 조식 포함.</div>
+  </div>
+  <div class="timeline">
+    <div class="tl-item" onclick="focusMap(34.9858,135.7602,'udon-express')"><div class="tl-dot food">🍜</div>
+      <div class="tl-card" id="card-udon-express"><div class="tl-time">07:00 ~ 08:00</div><div class="tl-title">아침 — Breakfast Udon Express <span class="rating">★ 4.7</span> <span class="badge badge-rec">추천</span></div><div class="tl-desc">교토역 근처. 7~10시만 운영. 현지인 단골 우동집.</div><div class="tl-tip">⚠️ 10시 폐장, 일찍 가야 함!</div></div></div>
+    <div class="tl-item"><div class="tl-dot transport">🚃</div>
+      <div class="tl-card"><div class="tl-time">08:30</div><div class="tl-title">교토역 → 아라시야마 출발</div><div class="tl-desc">JR 사가노선 → 사가아라시야마역 (약 15분).</div></div></div>
+    <div class="tl-item" onclick="focusMap(35.0168,135.6713,'bamboo')"><div class="tl-dot attraction">🎋</div>
+      <div class="tl-card" id="card-bamboo"><div class="tl-time">09:00 ~ 11:00</div><div class="tl-title">아라시야마 대나무숲 <span class="rating">★ 4.3</span></div><div class="tl-desc">교토 최고 포토스팟. 이른 아침이라 한산. 텐류지·도게츠교도 함께.</div><div class="tl-tip">💡 아침 일찍 올수록 햇살이 대나무 사이로 스며들어 아름다움</div></div></div>
+    <div class="tl-item" onclick="focusMap(35.013,135.6773,'yoshimura')"><div class="tl-dot food">🍣</div>
+      <div class="tl-card" id="card-yoshimura"><div class="tl-time">11:30 ~ 13:00</div><div class="tl-title">점심 — 아라시야마 요시무라 <span class="rating">★ 4.2</span> <span class="badge badge-rec">추천</span></div><div class="tl-desc">강 뷰 소바집. 청어소바·텐푸라·장어덮밥 모두 있음.</div><div class="tl-tip">💡 11시 오픈 직후 방문, 강 쪽 창가 자리 요청!</div></div></div>
+    <div class="tl-item" onclick="focusMap(35.0169,135.6772,'unagi')"><div class="tl-dot food">🐟</div>
+      <div class="tl-card" id="card-unagi"><div class="tl-time">점심 대안</div><div class="tl-title">우나기 히로카와 <span class="rating">★ 4.3</span></div><div class="tl-desc">장어덮밥 전문. 예약 필수. 월요일 휴무 주의.</div></div></div>
+    <div class="tl-item" onclick="focusMap(35.0113,135.6771,'ryokan')"><div class="tl-dot hotel">♨️</div>
+      <div class="tl-card" id="card-ryokan"><div class="tl-time">15:00 ~ 16:00</div><div class="tl-title">료칸 체크인 — 하나이카다 <span class="rating">★ 4.2</span> <span class="badge badge-rec">추천</span> <span class="badge badge-onsen">♨️</span></div><div class="tl-desc">아라시야마 강변 료칸. 가이세키 저녁·조식 포함.</div><div class="tl-tip">💡 아버님 고기 제외 요청 가능 여부 예약 시 확인!</div></div></div>
+    <div class="tl-item"><div class="tl-dot hotel">♨️</div>
+      <div class="tl-card"><div class="tl-time">16:00 ~ 18:00</div><div class="tl-title">온천 입욕 & 여유</div><div class="tl-desc">히노키탕·노천탕 이용. 유카타 입고 도게츠교 산책.</div></div></div>
+    <div class="tl-item"><div class="tl-dot food">🍱</div>
+      <div class="tl-card"><div class="tl-time">18:30 ~ 20:30</div><div class="tl-title">료칸 가이세키 저녁 (懐石)</div><div class="tl-desc">제철 식재료 코스 요리 10여 가지. 일본 여행의 하이라이트!</div></div></div>
+  </div>
+</div>
+
+<!-- DAY 4 -->
+<div class="day-panel" id="day3">
+  <div class="day-header"><div class="day-badge d4">🏠</div><div><div class="day-title">귀국의 날</div><div class="day-subtitle">료칸 조식 → 간사이공항 → 인천 (KE724)</div></div></div>
+  <div class="advice-box"><h3>💡 클로드 수정 포인트</h3>
+    <div class="advice-item">KE724 12:35 출발 기준 1시간 30분 여유 → 공항 11:05 이전 도착 필요.</div>
+    <div class="advice-item">✅ 교토역 09:48 발 하루카 특급 → 간사이공항 11:08 도착! 12:35 출발까지 1시간 27분 여유.</div>
+    <div class="advice-item">인천 14:25 도착 후 주차어때 차량 반환. 미리 도착 예정 시간 전화로!</div>
+  </div>
+  <div class="timeline">
+    <div class="tl-item" onclick="focusMap(35.0113,135.6771,'ryokan')"><div class="tl-dot food">🍳</div>
+      <div class="tl-card"><div class="tl-time">07:30 ~ 09:00</div><div class="tl-title">료칸 가이세키 조식</div><div class="tl-desc">일본식 전통 조식. 오카유·구운 생선·낫토·된장국 등.</div></div></div>
+    <div class="tl-item" onclick="focusMap(35.0113,135.6771,'ryokan')"><div class="tl-dot transport">🧳</div>
+      <div class="tl-card"><div class="tl-time">09:20</div><div class="tl-title">료칸 체크아웃 + 교토역 출발</div><div class="tl-desc">아라시야마 → 교토역 약 20분. 09:48 하루카 탑승 목표.</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.9872,135.7582,'kyoto-sta')"><div class="tl-dot transport">🚄</div>
+      <div class="tl-card" id="card-kyoto-sta"><div class="tl-time">09:48 → 11:08</div><div class="tl-title">교토역 → 간사이공항 (하루카 특급) <span class="badge badge-rec">이 기차!</span></div><div class="tl-desc">교토 09:48 출발 → 간사이공항 11:08 도착 (약 80분). 1시간 27분 여유 ✅</div><div class="tl-tip">💡 전 편 09:18발도 있으나 료칸 조식 고려 시 09:48이 현실적</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.4348,135.2442,'kix')"><div class="tl-dot attraction">🛍️</div>
+      <div class="tl-card" id="card-kix"><div class="tl-time">11:08 ~ 12:10</div><div class="tl-title">간사이공항 도착 · 수속 · 면세점</div><div class="tl-desc">탑승수속 → 출국심사. 남은 시간 면세점 마지막 쇼핑!</div></div></div>
+    <div class="tl-item" onclick="focusMap(34.4348,135.2442,'kix')"><div class="tl-dot transport">✈️</div>
+      <div class="tl-card"><div class="tl-time">12:35 → 14:25</div><div class="tl-title">KE724 오사카(간사이) → 인천 2터미널</div><div class="tl-desc">비행 약 1시간 50분. 인천 도착 후 발렛 차량 수령!</div></div></div>
+    <div class="tl-item" onclick="focusMap(37.4602,126.4407,'incheon')"><div class="tl-dot transport">🚗</div>
+      <div class="tl-card"><div class="tl-time">14:25 이후</div><div class="tl-title">인천공항 2터미널 · 차량 수령 → 청양 귀가 🙏</div><div class="tl-desc">주차어때 발렛 차량 반환. 충남 청양까지 약 2시간 30분.</div></div></div>
+  </div>
+</div>
+
+</div><!-- /left-col -->
+
+<!-- 지도 -->
+<div class="map-panel">
+  <div class="map-wrap"><div id="map"></div></div>
+  <div class="map-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div>숙소/료칸</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e67e22"></div>식당</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#2980b9"></div>관광지</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#8e44ad"></div>쇼핑</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#27ae60"></div>공항/교통</div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ── 지도 초기화 (CartoDB 깔끔한 타일 사용) ──
+const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([36, 131], 5);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  maxZoom: 19,
+  subdomains: 'abcd'
+}).addTo(map);
+
+// attribution 우측 하단에 작게
+L.control.attribution({ position: 'bottomright', prefix: '' })
+  .addAttribution('© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>')
+  .addTo(map);
+
+L.control.zoom({ position: 'topright' }).addTo(map);
+
+// ── 각 날짜 데이터 ──
+const dayData = [
+  { center:[131, 36], zoom:5, locs:[
+    { lat:36.4551,  lng:126.8029, color:'#27ae60', id:'cheongyang',  name:'🚗 충남 청양 출발' },
+    { lat:37.4602,  lng:126.4407, color:'#27ae60', id:'incheon',     name:'✈️ 인천공항 2터미널' },
+    { lat:34.6657,  lng:135.5059, color:'#c0392b', id:'hotel1',      name:'🏨 수퍼호텔 난바 닛폰바시' },
+    { lat:34.6684,  lng:135.5032, color:'#e67e22', id:'ichiran',     name:'🍜 이치란 도톤보리' },
+    { lat:34.6686,  lng:135.5031, color:'#2980b9', id:'dotonbori',   name:'🎡 도톤보리' },
+    { lat:34.6693,  lng:135.5026, color:'#8e44ad', id:'donki',       name:'🛒 돈키호테' },
+    { lat:34.6654,  lng:135.5062, color:'#2980b9', id:'kuromon',     name:'🏪 구로몬시장' },
+  ]},
+  { center:[135.51, 34.84], zoom:10, locs:[
+    { lat:34.6654,  lng:135.5062, color:'#2980b9', id:'kuromon',      name:'🛒 구로몬시장 아침' },
+    { lat:34.6873,  lng:135.5259, color:'#2980b9', id:'osaka-castle', name:'🏯 오사카성' },
+    { lat:34.6678,  lng:135.4940, color:'#e67e22', id:'kawasaki',     name:'🍱 KAWASAKI 가정식' },
+    { lat:34.9888,  lng:135.7425, color:'#c0392b', id:'hotel-kyoto',  name:'🏨 교토 우메코지 카덴쇼' },
+    { lat:34.9875,  lng:135.7593, color:'#2980b9', id:'kyoto-tower',  name:'🗼 교토타워' },
+    { lat:35.0061,  lng:135.7580, color:'#e67e22', id:'sukiyaki',     name:'🍲 스키야키 히로시게' },
+  ]},
+  { center:[135.695, 35.01], zoom:13, locs:[
+    { lat:34.9858,  lng:135.7602, color:'#e67e22', id:'udon-express', name:'🍜 Breakfast Udon Express' },
+    { lat:35.0168,  lng:135.6713, color:'#2980b9', id:'bamboo',       name:'🎋 아라시야마 대나무숲' },
+    { lat:35.0130,  lng:135.6773, color:'#e67e22', id:'yoshimura',    name:'🍣 아라시야마 요시무라' },
+    { lat:35.0169,  lng:135.6772, color:'#e67e22', id:'unagi',        name:'🐟 우나기 히로카와' },
+    { lat:35.0113,  lng:135.6771, color:'#c0392b', id:'ryokan',       name:'♨️ 하나이카다 료칸' },
+  ]},
+  { center:[131, 36], zoom:5, locs:[
+    { lat:35.0113,  lng:135.6771, color:'#c0392b', id:'ryokan',     name:'♨️ 하나이카다 체크아웃' },
+    { lat:34.9872,  lng:135.7582, color:'#27ae60', id:'kyoto-sta',  name:'🚄 교토역 09:48 출발' },
+    { lat:34.4348,  lng:135.2442, color:'#27ae60', id:'kix',        name:'✈️ 간사이공항 11:08' },
+    { lat:37.4602,  lng:126.4407, color:'#27ae60', id:'incheon',    name:'🛬 인천공항 14:25' },
+    { lat:36.4551,  lng:126.8029, color:'#27ae60', id:'cheongyang', name:'🏠 충남 청양 귀가' },
+  ]},
+];
+
+let markers = [], activePopup = null;
+
+function makeIcon(color, num) {
+  const el = document.createElement('div');
+  el.className = 'cm';
+  el.style.background = color;
+  el.textContent = num;
+  return L.divIcon({ html: el.outerHTML, className: '', iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -18] });
+}
+
+function updateMapForDay(n) {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  const d = dayData[n];
+  map.flyTo([d.center[1], d.center[0]], d.zoom, { duration: 0.8 });
+  d.locs.forEach((loc, i) => {
+    const m = L.marker([loc.lat, loc.lng], { icon: makeIcon(loc.color, i+1) })
+      .bindPopup(`<b>${loc.name}</b>`, { closeButton: false, autoPan: false })
+      .addTo(map);
+    markers.push(m);
+  });
+}
+
+function focusMap(lat, lng, id) {
+  map.flyTo([lat, lng], 15, { duration: 0.7 });
+  document.querySelectorAll('.tl-card').forEach(c => c.classList.remove('selected'));
+  const el = document.getElementById('card-' + id);
+  if (el) { el.classList.add('selected'); el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  const n = getCurrentDay();
+  const d = dayData[n];
+  const idx = d.locs.findIndex(l => l.id === id);
+  if (idx >= 0 && markers[idx]) markers[idx].openPopup();
+}
+
+function switchDay(n) {
+  document.querySelectorAll('.day-panel').forEach((p,i) => p.classList.toggle('active', i===n));
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===n));
+  updateMapForDay(n);
+}
+
+function getCurrentDay() {
+  const tabs = document.querySelectorAll('.tab-btn');
+  for (let i = 0; i < tabs.length; i++) if (tabs[i].classList.contains('active')) return i;
+  return 0;
+}
+
+updateMapForDay(0);
+</script>
+</body>
+</html>
